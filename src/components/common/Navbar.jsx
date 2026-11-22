@@ -1,0 +1,419 @@
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { 
+  Sparkles, 
+  Sun, 
+  Moon, 
+  Bell, 
+  User, 
+  LogOut, 
+  GraduationCap, 
+  Building2, 
+  BookOpen, 
+  MessageSquare,
+  ShieldCheck,
+  ChevronDown,
+  Menu,
+  X,
+  Database,
+  LayoutDashboard,
+  Briefcase,
+  PlusSquare,
+  UserCheck,
+  Search,
+  BarChart3,
+  TrendingUp,
+  BookOpenCheck
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { getLiveNotificationsForUser } from '../../services/notificationService';
+import NotificationCenter from './NotificationCenter';
+import FirebaseConfigModal from './FirebaseConfigModal';
+
+export default function Navbar() {
+  const { currentUser, userRole, logout, switchDemoRole } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showFirebaseModal, setShowFirebaseModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  useEffect(() => {
+    async function checkNotifications() {
+      if (!currentUser) return;
+      try {
+        const notifs = await getLiveNotificationsForUser(currentUser);
+        setUnreadNotifCount(notifs.filter(n => !n.read).length);
+      } catch (err) {
+        console.warn("Failed checking unread count:", err);
+      }
+    }
+    checkNotifications();
+
+    const handleUpdate = () => {
+      checkNotifications();
+    };
+
+    window.addEventListener('nexthire-notification-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('nexthire-notification-updated', handleUpdate);
+    };
+  }, [currentUser]);
+
+  const handleRoleSwitch = (role) => {
+    switchDemoRole(role);
+    if (role === 'student') navigate('/student/dashboard');
+    if (role === 'recruiter') navigate('/industry/dashboard');
+    if (role === 'academician') navigate('/academician/dashboard');
+  };
+
+  const getDashboardPath = () => {
+    if (userRole === 'student') return '/student/dashboard';
+    if (userRole === 'recruiter') return '/industry/dashboard';
+    if (userRole === 'academician') return '/academician/dashboard';
+    return '/';
+  };
+
+  return (
+    <header className="sticky top-0 z-40 w-full bg-white/95 border-b border-slate-200 backdrop-blur-md shadow-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          
+          {/* Brand Logo */}
+          <div className="flex items-center space-x-3">
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">
+                <Sparkles className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="text-xl font-extrabold tracking-tight text-blue-950">Next<span className="text-blue-600">Hire</span></span>
+              </div>
+            </Link>
+          </div>
+
+          {/* Navigation Links for Authenticated User */}
+          {currentUser && (
+            <div className="hidden md:flex items-center space-x-4 text-xs font-semibold">
+              <Link
+                to={getDashboardPath()}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-all ${
+                  location.pathname.includes('/dashboard')
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200 font-bold'
+                    : 'text-slate-600 hover:text-blue-600 hover:bg-slate-50'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                <span>Dashboard ({userRole})</span>
+              </Link>
+            </div>
+          )}
+
+
+          {/* Right Navigation & Controls */}
+          <div className="flex items-center space-x-3">
+
+            {/* Theme Switcher Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors border border-slate-200"
+              title="Toggle Theme"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-600" />}
+            </button>
+
+            {currentUser ? (
+              <>
+                {/* Notification Dropdown Trigger */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative p-2 rounded-xl text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors border border-slate-200"
+                    title="Live Notifications"
+                  >
+                    <Bell className="w-4 h-4" />
+                    {unreadNotifCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-blue-600 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white shadow-xs animate-bounce">
+                        {unreadNotifCount > 9 ? '9+' : unreadNotifCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                    <NotificationCenter onClose={() => setShowNotifications(false)} />
+                  )}
+                </div>
+
+                {/* User Menu Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowUserDropdown(!showUserDropdown)}
+                    className="flex items-center space-x-2 p-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-blue-50/70 transition-colors text-slate-800"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white text-sm shadow-xs">
+                      {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                    <div className="hidden sm:block text-left">
+                      <div className="text-xs font-bold text-slate-900 max-w-[120px] truncate">{currentUser.name}</div>
+                      <div className="text-[10px] text-slate-500 capitalize flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3 text-blue-600" />
+                        {userRole}
+                      </div>
+                    </div>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-500" />
+                  </button>
+
+                  {showUserDropdown && (
+                    <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl py-2 border border-slate-200 z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
+                        <p className="text-sm font-bold text-slate-900">{currentUser.name}</p>
+                        <p className="text-xs text-slate-500 truncate mt-0.5">{currentUser.email}</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-blue-50 text-blue-700 rounded-md border border-blue-200">
+                            {userRole}
+                          </span>
+                          <span className="text-[10px] text-emerald-600 flex items-center gap-1 font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                            Active Session
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Navigation Links for Current Role */}
+                      <div className="py-2 border-b border-slate-100 space-y-0.5 px-1">
+                        <p className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Menu Options
+                        </p>
+
+                        {/* Student Links */}
+                        {userRole === 'student' && (
+                          <>
+                            <Link
+                              to="/student/dashboard"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <LayoutDashboard className="w-4 h-4 text-blue-600" />
+                              Dashboard
+                            </Link>
+                            <Link
+                              to="/student/profile"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <User className="w-4 h-4 text-blue-600" />
+                              My Profile & Skills
+                            </Link>
+                            <Link
+                              to="/student/resume-analyzer"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <Sparkles className="w-4 h-4 text-amber-500" />
+                              AI Resume Analyzer
+                            </Link>
+                            <Link
+                              to="/student/interview-prep"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <Sparkles className="w-4 h-4 text-blue-600" />
+                              AI Interview Coach
+                            </Link>
+                            <Link
+                              to="/student/skill-roadmap"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <BarChart3 className="w-4 h-4 text-purple-600" />
+                              Skill Radar & Roadmap
+                            </Link>
+                            <Link
+                              to="/student/challenges"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <Briefcase className="w-4 h-4 text-emerald-600" />
+                              Industry Challenges
+                            </Link>
+                            <Link
+                              to="/student/jobs"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <Briefcase className="w-4 h-4 text-slate-600" />
+                              Jobs & Internships
+                            </Link>
+                          </>
+                        )}
+
+                        {/* Academician Links */}
+                        {userRole === 'academician' && (
+                          <>
+                            <Link
+                              to="/academician/dashboard"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <LayoutDashboard className="w-4 h-4 text-blue-600" />
+                              Placement Dashboard
+                            </Link>
+                            <Link
+                              to="/academician/analytics"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <BarChart3 className="w-4 h-4 text-indigo-600" />
+                              Skill Gap Analytics
+                            </Link>
+                            <Link
+                              to="/academician/monitoring"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <TrendingUp className="w-4 h-4 text-emerald-600" />
+                              Student Readiness
+                            </Link>
+                            <Link
+                              to="/academician/curriculum-projects"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <BookOpenCheck className="w-4 h-4 text-amber-500" />
+                              AI Curriculum & Projects
+                            </Link>
+                          </>
+                        )}
+
+                        {/* Recruiter / Industry Links */}
+                        {(userRole === 'recruiter' || userRole === 'industry') && (
+                          <>
+                            <Link
+                              to="/industry/dashboard"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <LayoutDashboard className="w-4 h-4 text-blue-600" />
+                              Recruiter Dashboard
+                            </Link>
+                            <Link
+                              to="/industry/post-job"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <PlusSquare className="w-4 h-4 text-indigo-600" />
+                              Post Job / Internship
+                            </Link>
+                            <Link
+                              to="/industry/applicants"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <UserCheck className="w-4 h-4 text-emerald-600" />
+                              AI Candidate Ranking
+                            </Link>
+                            <Link
+                              to="/industry/search-students"
+                              onClick={() => setShowUserDropdown(false)}
+                              className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                            >
+                              <Search className="w-4 h-4 text-amber-500" />
+                              Search Students
+                            </Link>
+                          </>
+                        )}
+
+                        {/* Admin Link */}
+                        {userRole === 'admin' && (
+                          <Link
+                            to="/admin/dashboard"
+                            onClick={() => setShowUserDropdown(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-colors"
+                          >
+                            <LayoutDashboard className="w-4 h-4 text-blue-600" />
+                            Admin Panel
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* Sign Out Action */}
+                      <div className="pt-1 px-1 border-t border-slate-100 mt-1">
+                        <button
+                          onClick={() => {
+                            setShowUserDropdown(false);
+                            logout();
+                            navigate('/login');
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-xl transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <Link
+                  to="/login"
+                  className="px-4 py-2 text-xs font-bold text-slate-700 hover:text-blue-600 transition-colors"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-4 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/20 transition-all"
+                >
+                  Get Started
+                </Link>
+              </div>
+            )}
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-slate-400 hover:text-white"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Mobile Drawer Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden glass-panel border-t border-slate-800 px-4 pt-2 pb-4 space-y-2">
+          {currentUser && (
+            <div className="p-3 bg-slate-800/60 rounded-xl space-y-2">
+              <p className="text-xs text-slate-200 font-bold">{currentUser.name}</p>
+              <p className="text-[11px] text-slate-400">{currentUser.email}</p>
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  logout();
+                  navigate('/login');
+                }}
+                className="w-full py-2 px-3 bg-red-500/20 text-red-300 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-colors flex items-center justify-center gap-2"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <FirebaseConfigModal
+        isOpen={showFirebaseModal}
+        onClose={() => setShowFirebaseModal(false)}
+      />
+    </header>
+  );
+}
